@@ -79,11 +79,14 @@ public:
     std::vector<float> inline GetInverseScaleSigmaSquares(){
         return mvInvLevelSigma2;
     }
-
+     //图像金字塔每层的图像
     std::vector<cv::Mat> mvImagePyramid;
 
 protected:
-
+     /*
+      先将图片缩放到mvInvScaleFactor对应尺寸，在图像外补一圈空白19padding
+      (提取FAST特征点需要特征点周围半径为3的区域，计算ORB描述子需要特征点周围半径16的区域)
+     */
     void ComputePyramid(cv::Mat image);
     void ComputeKeyPointsOctTree(std::vector<std::vector<cv::KeyPoint> >& allKeypoints);    
     std::vector<cv::KeyPoint> DistributeOctTree(const std::vector<cv::KeyPoint>& vToDistributeKeys, const int &minX,
@@ -91,22 +94,24 @@ protected:
 
     void ComputeKeyPointsOld(std::vector<std::vector<cv::KeyPoint> >& allKeypoints);
     std::vector<cv::Point> pattern;
+
+    int nfeatures;//提取几个特征点
+    double scaleFactor;//层级间的缩放系数
+    int nlevels;//层级数
+    //响应值，区间，就是值信度
+    int iniThFAST;//特征描述子门槛（高）
+    int minThFAST;//特征描述子门槛（低）
  
     cv::Ptr<cv::SIFT> dectorSIFT;
-    int nfeatures;
-    double scaleFactor;
-    int nlevels;
-    int iniThFAST;
-    int minThFAST;
 
-    std::vector<int> mnFeaturesPerLevel;
+    std::vector<int> mnFeaturesPerLevel;//图像每层提取的特征点数，总和为nfeatures
 
-    std::vector<int> umax;
+    std::vector<int> umax;//存放逼近一个圆的第一象限的点，更具对称性可以恢复其他的点
 
-    std::vector<float> mvScaleFactor;
-    std::vector<float> mvInvScaleFactor;    
-    std::vector<float> mvLevelSigma2;
-    std::vector<float> mvInvLevelSigma2;
+    std::vector<float> mvScaleFactor;//各层的缩放系数
+    std::vector<float> mvInvScaleFactor; //各层缩放系数的倒数
+    std::vector<float> mvLevelSigma2;//各层缩放系数的平方
+    std::vector<float> mvInvLevelSigma2;//各层缩放系数平方的倒数
 };
 
 } //namespace ORB_SLAM
