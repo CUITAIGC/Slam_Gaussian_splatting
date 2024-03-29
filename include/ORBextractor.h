@@ -91,7 +91,8 @@ protected:
 
     void ComputeKeyPointsOld(std::vector<std::vector<cv::KeyPoint> >& allKeypoints);
     std::vector<cv::Point> pattern;
-
+ 
+    cv::Ptr<cv::SIFT> dectorSIFT;
     int nfeatures;
     double scaleFactor;
     int nlevels;

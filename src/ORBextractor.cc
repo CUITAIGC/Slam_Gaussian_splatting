@@ -72,7 +72,6 @@ namespace ORB_SLAM3
     const int HALF_PATCH_SIZE = 15;
     const int EDGE_THRESHOLD = 19;
 
-
     static float IC_Angle(const Mat& image, Point2f pt,  const vector<int> & u_max)
     {
         int m_01 = 0, m_10 = 0;
@@ -411,6 +410,7 @@ namespace ORB_SLAM3
             nfeatures(_nfeatures), scaleFactor(_scaleFactor), nlevels(_nlevels),
             iniThFAST(_iniThFAST), minThFAST(_minThFAST)
     {
+        dectorSIFT = cv::SIFT::create();
         mvScaleFactor.resize(nlevels);
         mvLevelSigma2.resize(nlevels);
         mvScaleFactor[0]=1.0f;
@@ -821,7 +821,8 @@ namespace ORB_SLAM3
                         maxX = maxBorderX;
 
                     vector<cv::KeyPoint> vKeysCell;
-
+                    // dectorSIFT->detect(mvImagePyramid[level].rowRange(iniY,maxY).colRange(iniX,maxX),
+                      //   vKeysCell);
                     FAST(mvImagePyramid[level].rowRange(iniY,maxY).colRange(iniX,maxX),
                          vKeysCell,iniThFAST,true);
 
@@ -841,8 +842,10 @@ namespace ORB_SLAM3
 
                     if(vKeysCell.empty())
                     {
+                       // dectorSIFT->detect(mvImagePyramid[level].rowRange(iniY,maxY).colRange(iniX,maxX),
+                          //  vKeysCell);
                         FAST(mvImagePyramid[level].rowRange(iniY,maxY).colRange(iniX,maxX),
-                             vKeysCell,minThFAST,true);
+                           vKeysCell,minThFAST,true);
                         /*if(bRight && j <= 13){
                             FAST(mvImagePyramid[level].rowRange(iniY,maxY).colRange(iniX,maxX),
                                  vKeysCell,5,true);
@@ -974,13 +977,14 @@ namespace ORB_SLAM3
 
                     cellKeyPoints[i][j].reserve(nfeaturesCell*5);
 
-                    FAST(cellImage,cellKeyPoints[i][j],iniThFAST,true);
+                     FAST(cellImage,cellKeyPoints[i][j],iniThFAST,true);
+                   // dectorSIFT->detect(cellImage,cellKeyPoints[i][j]);
 
                     if(cellKeyPoints[i][j].size()<=3)
                     {
                         cellKeyPoints[i][j].clear();
-
-                        FAST(cellImage,cellKeyPoints[i][j],minThFAST,true);
+                     // dectorSIFT->detect(cellImage, cellKeyPoints[i][j]);
+                       FAST(cellImage,cellKeyPoints[i][j],minThFAST,true);
                     }
 
 

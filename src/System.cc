@@ -289,7 +289,7 @@ namespace ORB_SLAM3
                 tracks.push_back(pos1);
             }
 
-            point_3d.writePointDate(vpMPs[i]->mnId, pos(0), pos(1), pos(2), 200, 200, 200, 0.345, tracks);
+            point_3d.writePointDate(vpMPs[i]->mnId, pos(0), pos(1), pos(2), 0, 0, 0, 0, tracks);
             pointsData.push_back(point_3d);
         }
         std::vector<ImageColmap> imageData;
