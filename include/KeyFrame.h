@@ -375,6 +375,8 @@ public:
     // Calibration parameters
     const float fx, fy, cx, cy, invfx, invfy, mbf, mb, mThDepth;
     cv::Mat mDistCoef;
+    //彩色图
+    cv::Mat RGBM;
 
     // Number of KeyPoints
     const int N;
@@ -385,7 +387,6 @@ public:
     const std::vector<float> mvuRight; // negative value for monocular points
     const std::vector<float> mvDepth; // negative value for monocular points
     const cv::Mat mDescriptors;
-
     //BoW
     DBoW2::BowVector mBowVec;
     DBoW2::FeatureVector mFeatVec;
@@ -410,6 +411,8 @@ public:
     // Preintegrated IMU measurements from previous keyframe
     KeyFrame* mPrevKF;
     KeyFrame* mNextKF;
+    //重投影误差
+    float mReprojectionError = 0.0f;
 
     IMU::Preintegrated* mpImuPreintegrated;
     IMU::Calib mImuCalib;

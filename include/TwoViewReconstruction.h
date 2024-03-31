@@ -40,7 +40,7 @@ namespace ORB_SLAM3
         // Computes in parallel a fundamental matrix and a homography
         // Selects a model and tries to recover the motion and the structure from motion
         bool Reconstruct(const std::vector<cv::KeyPoint>& vKeys1, const std::vector<cv::KeyPoint>& vKeys2, const std::vector<int> &vMatches12,
-                          Sophus::SE3f &T21, std::vector<cv::Point3f> &vP3D, std::vector<bool> &vbTriangulated);
+                          Sophus::SE3f &T21, std::vector<cv::Point3f> &vP3D, std::vector<bool> &vbTriangulated, std::vector<float> &reprojectionErrors);
 
     private:
 
@@ -75,6 +75,8 @@ namespace ORB_SLAM3
 
         // Keypoints from Current Frame (Frame 2)
         std::vector<cv::KeyPoint> mvKeys2;
+
+        float mHMinFirstError=0.0f,mHMinSecondError=0.0f,mFMinFirstError=0.0f,mFMinSecondError=0.0f, mHTempFirstError=0.0f,mHTempSecondError=0.0f, mFTempFirstError=0.0f,mFTempSecondError=0.0f;
 
         // Current Matches from Reference to Current
         std::vector<Match> mvMatches12;

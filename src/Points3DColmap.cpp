@@ -1,7 +1,7 @@
 
 #include "Points3DColmap.h"
 
-void Points3DColmap::writePointDate(int point_id, float x, float y, float z, float r, float g, float b, float error, std::vector<Tracks> track)
+void Points3DColmap::writePointDate(int point_id, float x, float y, float z, int r, int g, int b, float error, std::vector<Tracks> track)
 {
 	point3D_ID = point_id;
 	this->x = x;

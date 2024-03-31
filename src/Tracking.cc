@@ -1602,7 +1602,7 @@ Sophus::SE3f Tracking::GrabImageMonocular(const cv::Mat &im, const double &times
 
     if (mState==NO_IMAGES_YET)
         t0=timestamp;
-
+    mCurrentFrame.RGBM = im;
     mCurrentFrame.mNameFile = filename;
     mCurrentFrame.mnDataset = mnNumDataset;
 
@@ -2502,8 +2502,8 @@ void Tracking::MonocularInitialization()
 
         Sophus::SE3f Tcw;
         vector<bool> vbTriangulated; // Triangulated Correspondences (mvIniMatches)
-
-        if(mpCamera->ReconstructWithTwoViews(mInitialFrame.mvKeysUn,mCurrentFrame.mvKeysUn,mvIniMatches,Tcw,mvIniP3D,vbTriangulated))
+        vector<float> reprojectionErrors; //记录重投影误差
+        if(mpCamera->ReconstructWithTwoViews(mInitialFrame.mvKeysUn,mCurrentFrame.mvKeysUn,mvIniMatches,Tcw,mvIniP3D,vbTriangulated,reprojectionErrors))
         {
             for(size_t i=0, iend=mvIniMatches.size(); i<iend;i++)
             {
@@ -2517,6 +2517,10 @@ void Tracking::MonocularInitialization()
             // Set Frame Poses
             mInitialFrame.SetPose(Sophus::SE3f());
             mCurrentFrame.SetPose(Tcw);
+            if(reprojectionErrors.size()>=2){
+                mInitialFrame.mReprojectionError = reprojectionErrors[0];
+                mCurrentFrame.mReprojectionError = reprojectionErrors[1];
+            }
 
             CreateInitialMapMonocular();
         }

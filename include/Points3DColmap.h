@@ -13,10 +13,11 @@ class Points3DColmap
 {
 private:
 	int point3D_ID;
-	float x, y, z, R, G, B, error;
+	float x, y, z, error;
+	int R,G,B;
 	std::vector<Tracks> tracks;
 public:
-	void writePointDate(int point_id, float x, float y, float z, float r, float g, float b, float error, std::vector<Tracks> track);
+	void writePointDate(int point_id, float x, float y, float z, int r, int g, int b, float error, std::vector<Tracks> track);
 	std::string readOneLine();
 	int getTranksCount();
  };

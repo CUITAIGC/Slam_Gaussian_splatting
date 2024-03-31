@@ -227,6 +227,8 @@ public:
     // In the RGB-D case, RGB images can be distorted.
     std::vector<cv::KeyPoint> mvKeys, mvKeysRight;
     std::vector<cv::KeyPoint> mvKeysUn;
+    //重投影误差
+    float mReprojectionError = 0.0f;
 
     // Corresponding stereo coordinate and depth for each keypoint.
     std::vector<MapPoint*> mvpMapPoints;
@@ -295,6 +297,8 @@ public:
     map<long unsigned int, cv::Point2f> mmMatchedInImage;
 
     string mNameFile;
+    //彩色图
+    cv::Mat RGBM;
 
     int mnDataset;
 

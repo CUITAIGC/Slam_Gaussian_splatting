@@ -281,15 +281,37 @@ namespace ORB_SLAM3
             Points3DColmap point_3d;
             std::vector<Tracks> tracks;
             std::map<KeyFrame *, std::tuple<int, int>> pobs = vpMPs[i]->GetObservations();
+            float error = 0.0f;
+            int R = 0,G = 0,B = 0;
+            int sizel = pobs.size();
             for (const auto &element : pobs)
             {
+                KeyFrame * pKF = element.first;
                 Tracks pos1;
-                pos1.image_id = element.first->mnId;
+                pos1.image_id = pKF->mnId;
                 pos1.image_point2D_Index = get<0>(element.second);
+                error += pKF->mReprojectionError;
+                if(pos1.image_point2D_Index >= 0 && pos1.image_point2D_Index < pKF->mvKeys.size()){
+                    float x =  pKF->mvKeys[pos1.image_point2D_Index].pt.x;
+                    float y =  pKF->mvKeys[pos1.image_point2D_Index].pt.y;
+                    if (x >= 0 && x < pKF->RGBM.cols && y >= 0 && y < pKF->RGBM.rows) {  
+                        cv::Vec3b bgr_pixel =pKF->RGBM.at<cv::Vec3b>(y, x);
+                        // 分别获取B、G、R值 
+                        B += (int)bgr_pixel[0] / sizel;
+                        G += (int)bgr_pixel[1] / sizel;  
+                        R += (int)bgr_pixel[2] / sizel; 
+                    } else {
+                        // 索引无效，处理错误  
+                        std::cout<<" wx = "<<pKF->RGBM.cols<<" wy = "<<pKF->RGBM.rows<<std::endl;
+                        std::cout << "Invalid index! x = " << x<< " y = "<<y<<std::endl;  
+                    }
+                }
                 tracks.push_back(pos1);
             }
-
-            point_3d.writePointDate(vpMPs[i]->mnId, pos(0), pos(1), pos(2), 0, 0, 0, 0, tracks);
+            error = error / (sizel * 1.0f);
+            //cout<<"out R "<<R<<" G "<<G<<" B " <<B<<endl;
+            //cout<<"out error " <<error<<endl;
+            point_3d.writePointDate(vpMPs[i]->mnId, pos(0), pos(1), pos(2), R, G, B, error, tracks);
             pointsData.push_back(point_3d);
         }
         std::vector<ImageColmap> imageData;
