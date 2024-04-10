@@ -381,7 +381,7 @@ Frame::Frame(const cv::Mat &imGray, const double &timeStamp, ORBextractor* extra
     mpMutexImu = new std::mutex();
 }
 
-
+//在对特征点进行预处理后，将特征点分配到48*64的网格中加速匹配
 void Frame::AssignFeaturesToGrid()
 {
     // Fill matrix with points
@@ -743,7 +743,7 @@ void Frame::ComputeBoW()
         mpORBvocabulary->transform(vCurrentDesc,mBowVec,mFeatVec,4);
     }
 }
-
+//畸变矫正，双目不需要畸变矫正
 void Frame::UndistortKeyPoints()
 {
     if(mDistCoef.at<float>(0)==0.0)
@@ -807,7 +807,7 @@ void Frame::ComputeImageBounds(const cv::Mat &imLeft)
         mnMaxY = imLeft.rows;
     }
 }
-
+//双目匹配，粗匹配，精匹配，亚像素插值打成小数
 void Frame::ComputeStereoMatches()
 {
     mvuRight = vector<float>(N,-1.0f);
@@ -863,7 +863,7 @@ void Frame::ComputeStereoMatches()
 
         if(maxU<0)
             continue;
-
+        //粗匹配，根据特征点描述子和金字塔层级进行匹配
         int bestDist = ORBmatcher::TH_HIGH;
         size_t bestIdxR = 0;
 
@@ -892,7 +892,7 @@ void Frame::ComputeStereoMatches()
                 }
             }
         }
-
+         //精匹配，滑动匹配，根据匹配点周围5*5窗口寻找精确匹配
         // Subpixel match by correlation
         if(bestDist<thOrbDist)
         {
@@ -934,7 +934,7 @@ void Frame::ComputeStereoMatches()
 
             if(bestincR==-L || bestincR==L)
                 continue;
-
+             //亚像素插值：将特征点匹配距离拟合成二次曲线，寻找二次曲线最低点，作为最优匹配点
             // Sub-pixel match (Parabola fitting)
             const float dist1 = vDists[L+bestincR-1];
             const float dist2 = vDists[L+bestincR];
@@ -944,7 +944,7 @@ void Frame::ComputeStereoMatches()
 
             if(deltaR<-1 || deltaR>1)
                 continue;
-
+             //记录特征点的右目和深度信息
             // Re-scaled coordinate
             float bestuR = mvScaleFactors[kpL.octave]*((float)scaleduR0+(float)bestincR+deltaR);
 
@@ -963,7 +963,7 @@ void Frame::ComputeStereoMatches()
             }
         }
     }
-
+    //删除离群点：匹配距离大于平均距离2.1倍视为误差
     sort(vDistIdx.begin(),vDistIdx.end());
     const float median = vDistIdx[vDistIdx.size()/2].first;
     const float thDist = 1.5f*1.4f*median;
@@ -980,7 +980,7 @@ void Frame::ComputeStereoMatches()
     }
 }
 
-
+//根据深度构造虚拟右目图像
 void Frame::ComputeStereoFromRGBD(const cv::Mat &imDepth)
 {
     mvuRight = vector<float>(N,-1);
@@ -993,7 +993,7 @@ void Frame::ComputeStereoFromRGBD(const cv::Mat &imDepth)
 
         const float &v = kp.pt.y;
         const float &u = kp.pt.x;
-
+        //从未畸变矫正的深度图中获取深度信息，从矫正过后的左图中获取特征点位置信息，构造虚拟右目
         const float d = imDepth.at<float>(v,u);
 
         if(d>0)

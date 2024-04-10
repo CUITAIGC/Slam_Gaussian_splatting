@@ -45,6 +45,11 @@
 #include "Viewer.h"
 #include "ImuTypes.h"
 #include "Settings.h"
+
+// for point cloud viewing
+#include "pointcloudmapping.h"
+
+
 static const string OUTPUT_TXT_PATH = "orbData/sparse/0/"; 
 static const string OUTPUT_IMAGE_PATH = "orbData/images/"; 
 
@@ -82,6 +87,7 @@ class Viewer;
 class FrameDrawer;
 class MapDrawer;
 class Atlas;
+class PointCloudMapping;
 // class ImageColmap;
 // class Points3DColmap;
 class Tracking;
@@ -111,53 +117,52 @@ public:
     string input_file_path;
 public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-    // Initialize the SLAM system. It launches the Local Mapping, Loop Closing and Viewer threads.
+    // 构造函数. 启动 Local Mapg, Loop Closing and Viewer 线程.
     System(const string &strVocFile, const string &strSettingsFile, const eSensor sensor, const bool bUseViewer = false, const int initFr = 0, const string &strSequence = std::string());
 
-    // Proccess the given stereo frame. Images must be synchronized and rectified.
-    // Input images: RGB (CV_8UC3) or grayscale (CV_8U). RGB is converted to grayscale.
+    // 处理双目相机. 图像必须同步和矫正.
+    // Input images: RGB (CV_8UC3) or grayscale (CV_8U). RGB 转成 灰度
     // Returns the camera pose (empty if tracking fails).
     Sophus::SE3f TrackStereo(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timestamp, const vector<IMU::Point>& vImuMeas = vector<IMU::Point>(), string filename="");
 
-    // Process the given rgbd frame. Depthmap must be registered to the RGB frame.
-    // Input image: RGB (CV_8UC3) or grayscale (CV_8U). RGB is converted to grayscale.
+    // 处理RGBD, 深度图必须注册到RGB帧.
+    // Input image: RGB (CV_8UC3) or grayscale (CV_8U). RGB 转成 灰度
     // Input depthmap: Float (CV_32F).
     // Returns the camera pose (empty if tracking fails).
     Sophus::SE3f TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const double &timestamp, const vector<IMU::Point>& vImuMeas = vector<IMU::Point>(), string filename="");
 
-    // Proccess the given monocular frame and optionally imu data
-    // Input images: RGB (CV_8UC3) or grayscale (CV_8U). RGB is converted to grayscale.
+    // 处理单目帧和可选的imu数据
+    // Input images: RGB (CV_8UC3) or grayscale (CV_8U). RGB 转成 灰度
     // Returns the camera pose (empty if tracking fails).
     Sophus::SE3f TrackMonocular(const cv::Mat &im, const double &timestamp, const vector<IMU::Point>& vImuMeas = vector<IMU::Point>(), string filename="");
 
 
-    // This stops local mapping thread (map building) and performs only camera tracking.
+    // 停止局部建图线程，并仅执行相机跟踪.
     void ActivateLocalizationMode();
-    // This resumes local mapping thread and performs SLAM again.
+    // 恢复局部建图线程，并再次执行SLAM
     void DeactivateLocalizationMode();
 
-    // Returns true if there have been a big map change (loop closure, global BA)
-    // since last call to this function
+    //自上次调用此函数以来发生了较大的地图改变（循环闭合，全局BA）则返回true
     bool MapChanged();
 
-    // Reset the system (clear Atlas or the active map)
+    // 重置地图 (clear Atlas or the active map)
     void Reset();
     void ResetActiveMap();
 
-    // All threads will be requested to finish.
-    // It waits until all threads have finished.
-    // This function must be called before saving the trajectory.
+    // 请求完成所有线程.
+    // 将等待所有线程都完成.
+    // 在保存轨迹之前必须调用此函数
     void Shutdown();
     bool isShutDown();
 
-    // Save camera trajectory in the TUM RGB-D dataset format.
-    // Only for stereo and RGB-D. This method does not work for monocular.
-    // Call first Shutdown()
+    // 保存相机轨迹在TUM数据集.
+    // 仅适用于双目和RGB_D，不适应单目.
+    // 必须先调用shutdown
     // See format details at: http://vision.in.tum.de/data/datasets/rgbd-dataset
     void SaveTrajectoryTUM(const string &filename);
 
-    // Save keyframe poses in the TUM RGB-D dataset format.
-    // This method works for all sensor input.
+    // 存储关键帧的位姿在TUM数据集.
+    // 使用于所有sener.
     // Call first Shutdown()
     // See format details at: http://vision.in.tum.de/data/datasets/rgbd-dataset
     void SaveKeyFrameTrajectoryTUM(const string &filename);
@@ -168,7 +173,7 @@ public:
     void SaveTrajectoryEuRoC(const string &filename, Map* pMap);
     void SaveKeyFrameTrajectoryEuRoC(const string &filename, Map* pMap);
 
-    // Save data used for initialization debug
+    // 保存用于初始化调试的数据
     void SaveDebugData(const int &iniIdx);
 
     // Save camera trajectory in the KITTI dataset format.
@@ -206,42 +211,47 @@ private:
 
     void SaveAtlas(int type);
     bool LoadAtlas(int type);
+    
+    // point cloud mapping
+    shared_ptr<PointCloudMapping> mpPointCloudMapping;
 
     string CalculateCheckSum(string filename, int type);
 
-    // Input sensor
+    // 传感器类型 MONOCULAR，STEREO，RGBD
     eSensor mSensor;
 
-    // ORB vocabulary used for place recognition and feature matching.
+    // ORB字典，保存ORB描述子聚类结果.
     ORBVocabulary* mpVocabulary;
 
-    // KeyFrame database for place recognition (relocalization and loop detection).
+    // 关键帧数据库，保存ORB描述子倒排索引
+    // 用于位置识别（重新定位和循环检测）的KeyFrame数据库。
     KeyFrameDatabase* mpKeyFrameDatabase;
-
-    // Map structure that stores the pointers to all KeyFrames and MapPoints.
+     
+    //升级的地图关系
+    // 存储指向所有关键帧和映射点的指针的映射结构。
     //Map* mpMap;
     Atlas* mpAtlas;
 
-    // Tracker. It receives a frame and computes the associated camera pose.
-    // It also decides when to insert a new keyframe, create some new MapPoints and
-    // performs relocalization if tracking fails.
+   //跟踪器。它接收一个帧并计算相关的相机位姿。
+   //它还决定何时插入新的关键帧、创建一些新的MapPoints
+   //如果跟踪失败，则执行重新定位。
     Tracking* mpTracker;
 
-    // Local Mapper. It manages the local map and performs local bundle adjustment.
+    // 局部建图器。它管理局部建图并执行局部BA调整。
     LocalMapping* mpLocalMapper;
 
-    // Loop Closer. It searches loops with every new keyframe. If there is a loop it performs
-    // a pose graph optimization and full bundle adjustment (in a new thread) afterwards.
+    // 回环检测器. 负责检测每一个新加入的关键帧. 如果发现存在循环，则在新线程中进行位姿优化并进行全局BA调整.
     LoopClosing* mpLoopCloser;
 
-    // The viewer draws the map and the current camera pose. It uses Pangolin.
+    // 查看器，用于绘制地图和当前相机位姿.
     Viewer* mpViewer;
-
+     //帧绘制器
     FrameDrawer* mpFrameDrawer;
+    //地图绘制器
     MapDrawer* mpMapDrawer;
 
-    // System threads: Local Mapping, Loop Closing, Viewer.
-    // The Tracking thread "lives" in the main execution thread that creates the System object.
+    // 系统线程：局部建图，回环检测，查看器.
+    // 追踪线程在创建系统对象的主线程中执行
     std::thread* mptLocalMapping;
     std::thread* mptLoopClosing;
     std::thread* mptViewer;

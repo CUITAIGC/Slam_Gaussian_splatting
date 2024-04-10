@@ -349,14 +349,15 @@ namespace ORB_SLAM3
         else if (mSensor == IMU_RGBD)
             cout << "RGB-D-Inertial" << endl;
 
-        // Check settings file
+        // 读取配置文件信息
         cv::FileStorage fsSettings(strSettingsFile.c_str(), cv::FileStorage::READ);
         if (!fsSettings.isOpened())
         {
             cerr << "Failed to open settings file at: " << strSettingsFile << endl;
             exit(-1);
         }
-
+        // for point cloud resolution
+        float resolution = 0.4;
         cv::FileNode node = fsSettings["File.version"];
         if (!node.empty() && node.isString() && node.string() == "1.0")
         {
@@ -399,7 +400,7 @@ namespace ORB_SLAM3
             // Load ORB Vocabulary
             cout << endl
                  << "Loading ORB Vocabulary. This could take a while..." << endl;
-
+            //创建ORB词袋
             mpVocabulary = new ORBVocabulary();
             bool bVocLoad = mpVocabulary->loadFromTextFile(strVocFile);
             if (!bVocLoad)
@@ -411,10 +412,10 @@ namespace ORB_SLAM3
             cout << "Vocabulary loaded!" << endl
                  << endl;
 
-            // Create KeyFrame Database
+            // 创建关键帧数据库
             mpKeyFrameDatabase = new KeyFrameDatabase(*mpVocabulary);
 
-            // Create the Atlas
+            // 创建地图关系
             cout << "Initialization of Atlas from scratch " << endl;
             mpAtlas = new Atlas(0);
         }
@@ -471,12 +472,14 @@ namespace ORB_SLAM3
         // Create Drawers. These are used by the Viewer
         mpFrameDrawer = new FrameDrawer(mpAtlas);
         mpMapDrawer = new MapDrawer(mpAtlas, strSettingsFile, settings_);
+         // Initialize pointcloud mapping
+        mpPointCloudMapping = make_shared<PointCloudMapping>( resolution );
 
         // Initialize the Tracking thread
         //(it will live in the main thread of execution, the one that called this constructor)
         cout << "Seq. Name: " << strSequence << endl;
         mpTracker = new Tracking(this, mpVocabulary, mpFrameDrawer, mpMapDrawer,
-                                 mpAtlas, mpKeyFrameDatabase, strSettingsFile, mSensor, settings_, strSequence);
+                                 mpAtlas, mpKeyFrameDatabase, strSettingsFile, mSensor, settings_,mpPointCloudMapping, strSequence);
 
         // Initialize the Local Mapping thread and launch
         mpLocalMapper = new LocalMapping(this, mpAtlas, mSensor == MONOCULAR || mSensor == IMU_MONOCULAR,
@@ -500,7 +503,7 @@ namespace ORB_SLAM3
         mpLoopCloser = new LoopClosing(mpAtlas, mpKeyFrameDatabase, mpVocabulary, mSensor != MONOCULAR, activeLC); // mSensor!=MONOCULAR);
         mptLoopClosing = new thread(&ORB_SLAM3::LoopClosing::Run, mpLoopCloser);
 
-        // Set pointers between threads
+        // 设置线程间通信
         mpTracker->SetLocalMapper(mpLocalMapper);
         mpTracker->SetLoopClosing(mpLoopCloser);
 
@@ -823,6 +826,7 @@ namespace ORB_SLAM3
         cout << "Shutdown" << endl;
         mpLocalMapper->RequestFinish();
         mpLoopCloser->RequestFinish();
+        mpPointCloudMapping->shutdown();
        
 
       

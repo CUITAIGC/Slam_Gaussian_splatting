@@ -86,7 +86,7 @@ void LoopClosing::SetLocalMapper(LocalMapping *pLocalMapper)
     mpLocalMapper=pLocalMapper;
 }
 
-
+//回环检测
 void LoopClosing::Run()
 {
     mbFinished =false;

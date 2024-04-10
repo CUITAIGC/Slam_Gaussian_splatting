@@ -38,6 +38,9 @@
 #include "Settings.h"
 
 #include "GeometricCamera.h"
+// for pointcloud mapping and viewing
+#include "pointcloudmapping.h"
+
 
 #include <mutex>
 #include <unordered_set>
@@ -48,6 +51,7 @@ namespace ORB_SLAM3
 class Viewer;
 class FrameDrawer;
 class Atlas;
+class PointCloudMapping;
 class LocalMapping;
 class LoopClosing;
 class System;
@@ -59,7 +63,7 @@ class Tracking
 public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     Tracking(System* pSys, ORBVocabulary* pVoc, FrameDrawer* pFrameDrawer, MapDrawer* pMapDrawer, Atlas* pAtlas,
-             KeyFrameDatabase* pKFDB, const string &strSettingPath, const int sensor, Settings* settings, const string &_nameSeq=std::string());
+             KeyFrameDatabase* pKFDB, const string &strSettingPath, const int sensor, Settings* settings, shared_ptr<PointCloudMapping> pPointCloud,const string &_nameSeq=std::string());
 
     ~Tracking();
 
@@ -139,6 +143,7 @@ public:
     Frame mLastFrame;
 
     cv::Mat mImGray;
+    cv::Mat mImDepth; // adding mImDepth member to realize pointcloud view
 
     // Initialization Variables (Monocular)
     std::vector<int> mvIniLastMatches;
@@ -194,6 +199,8 @@ public:
 
 protected:
 
+    // for point cloud viewing
+    shared_ptr<PointCloudMapping> mpPointCloudMapping;
     // Main tracking function. It is independent of the input sensor.
     void Track();
 

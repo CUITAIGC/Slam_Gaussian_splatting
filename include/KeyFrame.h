@@ -221,7 +221,7 @@ public:
     // Covisibility graph functions
     void AddConnection(KeyFrame* pKF, const int &weight);
     void EraseConnection(KeyFrame* pKF);
-
+     //基于当前关键帧对地图点的观测构造共视图
     void UpdateConnections(bool upParent=true);
     void UpdateBestCovisibles();
     std::set<KeyFrame *> GetConnectedKeyFrames();
@@ -461,8 +461,9 @@ protected:
 
     // Grid over the image to speed up feature matching
     std::vector< std::vector <std::vector<size_t> > > mGrid;
-
+    //关键帧共视图,能看到同一地图点的两个关键帧之间存在共视关系，共视地图点的数量称为权重
     std::map<KeyFrame*,int> mConnectedKeyFrameWeights;
+    //根据权重关键帧从大到小排序
     std::vector<KeyFrame*> mvpOrderedConnectedKeyFrames;
     std::vector<int> mvOrderedWeights;
     // For save relation without pointer, this is necessary for save/load function

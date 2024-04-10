@@ -148,6 +148,7 @@ Eigen::Vector3f KeyFrame::GetCameraCenter(){
 
 Eigen::Vector3f KeyFrame::GetImuPosition()
 {
+    //加锁
     unique_lock<mutex> lock(mMutexPose);
     return mOwb;
 }

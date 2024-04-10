@@ -60,7 +60,7 @@ void LocalMapping::SetTracker(Tracking *pTracker)
 {
     mpTracker=pTracker;
 }
-
+//建图线程，主函数
 void LocalMapping::Run()
 {
     mbFinished = false;

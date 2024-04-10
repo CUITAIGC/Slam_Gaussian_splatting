@@ -41,10 +41,10 @@ namespace ORB_SLAM3
 {
 
 
-Tracking::Tracking(System *pSys, ORBVocabulary* pVoc, FrameDrawer *pFrameDrawer, MapDrawer *pMapDrawer, Atlas *pAtlas, KeyFrameDatabase* pKFDB, const string &strSettingPath, const int sensor, Settings* settings, const string &_nameSeq):
+Tracking::Tracking(System *pSys, ORBVocabulary* pVoc, FrameDrawer *pFrameDrawer, MapDrawer *pMapDrawer, Atlas *pAtlas, KeyFrameDatabase* pKFDB, const string &strSettingPath, const int sensor, Settings* settings, shared_ptr<PointCloudMapping> pPointCloud, const string &_nameSeq):
     mState(NO_IMAGES_YET), mSensor(sensor), mTrackedFr(0), mbStep(false),
     mbOnlyTracking(false), mbMapUpdated(false), mbVO(false), mpORBVocabulary(pVoc), mpKeyFrameDB(pKFDB),
-    mbReadyToInitializate(false), mpSystem(pSys), mpViewer(NULL), bStepByStep(false),
+    mbReadyToInitializate(false), mpSystem(pSys), mpViewer(NULL), bStepByStep(false),mpPointCloudMapping( pPointCloud ),
     mpFrameDrawer(pFrameDrawer), mpMapDrawer(pMapDrawer), mpAtlas(pAtlas), mnLastRelocFrameId(0), time_recently_lost(5.0),
     mnInitialFrameId(0), mbCreatedMap(false), mnFirstFrameId(0), mpCamera2(nullptr), mpLastKeyFrame(static_cast<KeyFrame*>(NULL))
 {
@@ -591,7 +591,7 @@ void Tracking::newParameterLoader(Settings *settings) {
     int fIniThFAST = settings->initThFAST();
     int fMinThFAST = settings->minThFAST();
     float fScaleFactor = settings->scaleFactor();
-    //创建特征提取器
+    //创建特征提取器，唯一一个所有帧都用这个
     mpORBextractorLeft = new ORBextractor(nFeatures,fScaleFactor,nLevels,fIniThFAST,fMinThFAST);
 
     if(mSensor==System::STEREO || mSensor==System::IMU_STEREO)
@@ -1522,7 +1522,7 @@ Sophus::SE3f Tracking::GrabImageStereo(const cv::Mat &imRectLeft, const cv::Mat 
 Sophus::SE3f Tracking::GrabImageRGBD(const cv::Mat &imRGB,const cv::Mat &imD, const double &timestamp, string filename)
 {
     mImGray = imRGB;
-    cv::Mat imDepth = imD;
+    mImDepth = imD;
 
     if(mImGray.channels()==3)
     {
@@ -1539,13 +1539,13 @@ Sophus::SE3f Tracking::GrabImageRGBD(const cv::Mat &imRGB,const cv::Mat &imD, co
             cvtColor(mImGray,mImGray,cv::COLOR_BGRA2GRAY);
     }
 
-    if((fabs(mDepthMapFactor-1.0f)>1e-5) || imDepth.type()!=CV_32F)
-        imDepth.convertTo(imDepth,CV_32F,mDepthMapFactor);
+    if((fabs(mDepthMapFactor-1.0f)>1e-5) || mImDepth.type()!=CV_32F)
+        mImDepth.convertTo(mImDepth,CV_32F,mDepthMapFactor);
 
     if (mSensor == System::RGBD)
-        mCurrentFrame = Frame(mImGray,imDepth,timestamp,mpORBextractorLeft,mpORBVocabulary,mK,mDistCoef,mbf,mThDepth,mpCamera);
+        mCurrentFrame = Frame(mImGray,mImDepth,timestamp,mpORBextractorLeft,mpORBVocabulary,mK,mDistCoef,mbf,mThDepth,mpCamera);
     else if(mSensor == System::IMU_RGBD)
-        mCurrentFrame = Frame(mImGray,imDepth,timestamp,mpORBextractorLeft,mpORBVocabulary,mK,mDistCoef,mbf,mThDepth,mpCamera,&mLastFrame,*mpImuCalib);
+        mCurrentFrame = Frame(mImGray,mImDepth,timestamp,mpORBextractorLeft,mpORBVocabulary,mK,mDistCoef,mbf,mThDepth,mpCamera,&mLastFrame,*mpImuCalib);
 
 
 
@@ -1792,7 +1792,7 @@ void Tracking::ResetFrameIMU()
     // TODO To implement...
 }
 
-
+//追踪线程
 void Tracking::Track()
 {
 
@@ -3342,6 +3342,8 @@ void Tracking::CreateNewKeyFrame()
     mpLocalMapper->InsertKeyFrame(pKF);
 
     mpLocalMapper->SetNotStop(false);
+    // insert Key Frame into point cloud viewer
+    mpPointCloudMapping->insertKeyFrame( pKF, this->mImGray, this->mImDepth );
 
     mnLastKeyFrameId = mCurrentFrame.mnId;
     mpLastKeyFrame = pKF;

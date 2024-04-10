@@ -158,7 +158,7 @@ public:
 protected:
 
     long unsigned int mnId;
-
+      
     std::set<MapPoint*> mspMapPoints;
     std::set<KeyFrame*> mspKeyFrames;
 

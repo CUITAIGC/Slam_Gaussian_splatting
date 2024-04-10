@@ -42,6 +42,8 @@ MESSAGE(${OpenCV_VERSION})
 find_package(Eigen3 3.1.0 REQUIRED)
 find_package(Pangolin REQUIRED)
 find_package(realsense2)
+# adding for point cloud viewer and mapper
+find_package( PCL 1.7 REQUIRED )
 
 include_directories(
 ${PROJECT_SOURCE_DIR}
@@ -49,8 +51,12 @@ ${PROJECT_SOURCE_DIR}/include
 ${PROJECT_SOURCE_DIR}/include/CameraModels
 ${PROJECT_SOURCE_DIR}/Thirdparty/Sophus
 ${EIGEN3_INCLUDE_DIR}
+${PCL_INCLUDE_DIRS}
 ${Pangolin_INCLUDE_DIRS}
 )
+
+add_definitions( ${PCL_DEFINITIONS} )
+link_directories( ${PCL_LIBRARY_DIRS} )
 
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/lib)
 
@@ -85,6 +91,7 @@ src/GeometricTools.cc
 src/TwoViewReconstruction.cc
 src/Config.cc
 src/Settings.cc
+src/pointcloudmapping.cc
 include/System.h
 include/Tracking.h
 include/LocalMapping.h
@@ -116,7 +123,8 @@ include/GeometricTools.h
 include/TwoViewReconstruction.h
 include/SerializationUtils.h
 include/Config.h
-include/Settings.h)
+include/Settings.h
+include/pointcloudmapping.h)
 
 add_subdirectory(Thirdparty/g2o)
 
@@ -126,6 +134,7 @@ ${EIGEN3_LIBS}
 ${Pangolin_LIBRARIES}
 ${PROJECT_SOURCE_DIR}/Thirdparty/DBoW2/lib/libDBoW2.so
 ${PROJECT_SOURCE_DIR}/Thirdparty/g2o/lib/libg2o.so
+${PCL_LIBRARIES}
 -lboost_serialization
 -lcrypto
 )

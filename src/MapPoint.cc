@@ -212,7 +212,7 @@ int MapPoint::Observations()
     unique_lock<mutex> lock(mMutexFeatures);
     return nObs;
 }
-
+//现在逻辑上标记坏点，之后在删除
 void MapPoint::SetBadFlag()
 {
     map<KeyFrame*, tuple<int,int>> obs;
@@ -244,7 +244,7 @@ MapPoint* MapPoint::GetReplaced()
     unique_lock<mutex> lock2(mMutexPos);
     return mpReplaced;
 }
-
+//回环检测的时候，会发生替换
 void MapPoint::Replace(MapPoint* pMP)
 {
     if(pMP->mnId==this->mnId)
@@ -325,7 +325,7 @@ float MapPoint::GetFoundRatio()
     unique_lock<mutex> lock(mMutexFeatures);
     return static_cast<float>(mnFound)/mnVisible;
 }
-
+//更新地图点的特征描述子，用与匹配2D点，本身也是由2d点产生，有点观测到就会跟新
 void MapPoint::ComputeDistinctiveDescriptors()
 {
     // Retrieve all observed descriptors
@@ -422,7 +422,7 @@ bool MapPoint::IsInKeyFrame(KeyFrame *pKF)
     unique_lock<mutex> lock(mMutexFeatures);
     return (mObservations.count(pKF));
 }
-
+//更新平均观察方向和距离
 void MapPoint::UpdateNormalAndDepth()
 {
     map<KeyFrame*,tuple<int,int>> observations;
