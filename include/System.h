@@ -52,6 +52,8 @@
 
 static const string OUTPUT_TXT_PATH = "orbData/sparse/0/"; 
 static const string OUTPUT_IMAGE_PATH = "orbData/images/"; 
+//最大重投影误差
+static const int ERROR_MAX = 5000 ; 
 
 namespace ORB_SLAM3
 {

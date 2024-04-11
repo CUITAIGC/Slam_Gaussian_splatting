@@ -332,6 +332,10 @@ void MapPoint::ComputeDistinctiveDescriptors()
     vector<cv::Mat> vDescriptors;
 
     map<KeyFrame*,tuple<int,int>> observations;
+    //记录可看到当前点的帧
+    vector<KeyFrame*> observationKeyFrams;
+    //点
+    vector<cv::KeyPoint> observationPoint;
 
     {
         unique_lock<mutex> lock1(mMutexFeatures);
@@ -355,9 +359,13 @@ void MapPoint::ComputeDistinctiveDescriptors()
 
             if(leftIndex != -1){
                 vDescriptors.push_back(pKF->mDescriptors.row(leftIndex));
+                observationKeyFrams.push_back(pKF);
+                observationPoint.push_back(pKF->mvKeys[leftIndex]);
             }
             if(rightIndex != -1){
                 vDescriptors.push_back(pKF->mDescriptors.row(rightIndex));
+                observationKeyFrams.push_back(pKF);
+                observationPoint.push_back(pKF->mvKeys[rightIndex]);
             }
         }
     }
@@ -399,6 +407,36 @@ void MapPoint::ComputeDistinctiveDescriptors()
     {
         unique_lock<mutex> lock(mMutexFeatures);
         mDescriptor = vDescriptors[BestIdx].clone();
+        //计算平均重投影误差
+        //以能看到这一个3D点的最好的一帧为参考
+        KeyFrame* bestPKF =  observationKeyFrams[BestIdx];
+        //位姿
+         Eigen::Isometry3d T1 = ORB_SLAM3::Converter::toSE3Quat( bestPKF->GetPoseInverse() );
+         //能看到这一个3D点的2D点坐标，作为参考2D点
+        cv::KeyPoint &kp1 = observationPoint[BestIdx];
+        float Rerror = 0.f;
+        //遍历其他可以看到这个3D点的帧
+        for(size_t i=0;i<N;i++){
+            if(i==BestIdx)continue;
+            KeyFrame* NpKF =  observationKeyFrams[i];
+            //取出位姿，2D点
+            Eigen::Isometry3d T2 = ORB_SLAM3::Converter::toSE3Quat( NpKF->GetPose() );
+            cv::KeyPoint &kp2 =observationPoint[i];
+             const float u1 = kp1.pt.x;
+            const float v1 = kp1.pt.y;
+            const float u2 = kp2.pt.x;
+            const float v2 = kp2.pt.y;
+            Eigen::Vector3d point1(u1,  v1, 1); 
+            //将当前2D点投影到参考2D点
+            Eigen::Vector3d transformedPoint =T2 *  T1 * point1 ;
+            const float u2in1 = transformedPoint[0];
+            const float v2in1 = transformedPoint[1];
+            //计算误差
+            const float squareDist1 = (u1-u2in1)*(u1-u2in1)+(v1-v2in1)*(v1-v2in1);
+            Rerror+=squareDist1/((N-1)*1.0);
+        }
+        //cout<<"error "<<Rerror<<endl;
+        mReprojectionError = Rerror;
     }
 }
 

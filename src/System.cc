@@ -250,7 +250,7 @@ namespace ORB_SLAM3
                 points_2D po;
                 po.corresponding_point_3D = -1;
                 auto it = allMapKey.find(i);
-                if (it != allMapKey.end())
+                if (it != allMapKey.end() && it->second->mReprojectionError > ERROR_MAX)
                 {
                     po.corresponding_point_3D = allMapKey[i]->mnId;
                 }
@@ -274,14 +274,14 @@ namespace ORB_SLAM3
         cout <<"point all  count  = "<< vpMPs.size()<< endl;
         for (size_t i = 0, iend = vpMPs.size(); i < iend; i++)
         {
-            // if (vpMPs[i]->isBad() || spRefMPs.count(vpMPs[i]))
-            //     continue;
+            if (vpMPs[i]->isBad() || spRefMPs.count(vpMPs[i]))
+                 continue;
+            if(vpMPs[i]->mReprojectionError>ERROR_MAX)continue;
             Eigen::Matrix<float, 3, 1> pos = vpMPs[i]->GetWorldPos();
             glVertex3f(pos(0), pos(1), pos(2));
             Points3DColmap point_3d;
             std::vector<Tracks> tracks;
             std::map<KeyFrame *, std::tuple<int, int>> pobs = vpMPs[i]->GetObservations();
-            float error = 0.0f;
             int R = 0,G = 0,B = 0;
             int sizel = pobs.size();
             for (const auto &element : pobs)
@@ -290,7 +290,6 @@ namespace ORB_SLAM3
                 Tracks pos1;
                 pos1.image_id = pKF->mnId;
                 pos1.image_point2D_Index = get<0>(element.second);
-                error += pKF->mReprojectionError;
                 if(pos1.image_point2D_Index >= 0 && pos1.image_point2D_Index < pKF->mvKeys.size()){
                     float x =  pKF->mvKeys[pos1.image_point2D_Index].pt.x;
                     float y =  pKF->mvKeys[pos1.image_point2D_Index].pt.y;
@@ -302,16 +301,15 @@ namespace ORB_SLAM3
                         R += (int)bgr_pixel[2] / sizel; 
                     } else {
                         // 索引无效，处理错误  
-                        std::cout<<" wx = "<<pKF->RGBM.cols<<" wy = "<<pKF->RGBM.rows<<std::endl;
-                        std::cout << "Invalid index! x = " << x<< " y = "<<y<<std::endl;  
+                        //std::cout<<" wx = "<<pKF->RGBM.cols<<" wy = "<<pKF->RGBM.rows<<std::endl;
+                       // std::cout << "Invalid index! x = " << x<< " y = "<<y<<std::endl;  
                     }
                 }
                 tracks.push_back(pos1);
             }
-            error = error / (sizel * 1.0f);
             //cout<<"out R "<<R<<" G "<<G<<" B " <<B<<endl;
             //cout<<"out error " <<error<<endl;
-            point_3d.writePointDate(vpMPs[i]->mnId, pos(0), pos(1), pos(2), R, G, B, error, tracks);
+            point_3d.writePointDate(vpMPs[i]->mnId, pos(0), pos(1), pos(2), R, G, B, vpMPs[i]->mReprojectionError/10000.0, tracks);
             pointsData.push_back(point_3d);
         }
         std::vector<ImageColmap> imageData;

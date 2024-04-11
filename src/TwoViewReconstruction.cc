@@ -39,7 +39,7 @@ namespace ORB_SLAM3
     }
 
     bool TwoViewReconstruction::Reconstruct(const std::vector<cv::KeyPoint>& vKeys1, const std::vector<cv::KeyPoint>& vKeys2, const vector<int> &vMatches12,
-                                             Sophus::SE3f &T21, vector<cv::Point3f> &vP3D, vector<bool> &vbTriangulated, std::vector<float> &reprojectionErrors)
+                                             Sophus::SE3f &T21, vector<cv::Point3f> &vP3D, vector<bool> &vbTriangulated)
     {
         mvKeys1.clear();
         mvKeys2.clear();
@@ -119,15 +119,11 @@ namespace ORB_SLAM3
         if(RH>0.50) // if(RH>0.40)
         {
             //cout << "Initialization from Homography" << endl;
-            reprojectionErrors.push_back(mHMinFirstError);
-            reprojectionErrors.push_back(mHMinSecondError);
             return ReconstructH(vbMatchesInliersH,H, mK,T21,vP3D,vbTriangulated,minParallax,50);
         }
         else //if(pF_HF>0.6)
         {
             //cout << "Initialization from Fundamental" << endl;
-            reprojectionErrors.push_back(mFMinFirstError);
-            reprojectionErrors.push_back(mFMinSecondError);
             return ReconstructF(vbMatchesInliersF,F,mK,T21,vP3D,vbTriangulated,minParallax,50);
         }
     }
@@ -175,8 +171,6 @@ namespace ORB_SLAM3
 
             if(currentScore>score)
             {
-                mHMinFirstError = mHTempFirstError;
-                mHMinSecondError = mHTempSecondError;
                 H21 = H21i;
                 vbMatchesInliers = vbCurrentInliers;
                 score = currentScore;
@@ -228,8 +222,6 @@ namespace ORB_SLAM3
 
             if(currentScore>score)
             {
-                mFMinFirstError = mFTempFirstError;
-                mFMinSecondError = mFTempSecondError;
                 F21 = F21i;
                 vbMatchesInliers = vbCurrentInliers;
                 score = currentScore;
@@ -370,8 +362,6 @@ namespace ORB_SLAM3
 
             const float chiSquare1 = squareDist1*invSigmaSquare;
 
-            mHTempFirstError = chiSquare1;
-
             if(chiSquare1>th)
                 bIn = false;
             else
@@ -388,7 +378,6 @@ namespace ORB_SLAM3
 
             const float chiSquare2 = squareDist2*invSigmaSquare;
             
-            mHTempSecondError = chiSquare2;
 
             if(chiSquare2>th)
                 bIn = false;
@@ -452,7 +441,6 @@ namespace ORB_SLAM3
 
             const float chiSquare1 = squareDist1*invSigmaSquare;
 
-            mFTempFirstError = chiSquare1;
 
             if(chiSquare1>th)
                 bIn = false;
@@ -472,7 +460,6 @@ namespace ORB_SLAM3
 
             const float chiSquare2 = squareDist2*invSigmaSquare;
 
-            mFTempSecondError = chiSquare2;
 
             if(chiSquare2>th)
                 bIn = false;

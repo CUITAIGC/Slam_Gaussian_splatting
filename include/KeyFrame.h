@@ -411,8 +411,6 @@ public:
     // Preintegrated IMU measurements from previous keyframe
     KeyFrame* mPrevKF;
     KeyFrame* mNextKF;
-    //重投影误差
-    float mReprojectionError = 0.0f;
 
     IMU::Preintegrated* mpImuPreintegrated;
     IMU::Calib mImuCalib;

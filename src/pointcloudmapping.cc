@@ -25,15 +25,15 @@
 #include "Converter.h"
 
 #include <boost/make_shared.hpp>
-using namespace ORB_SLAM3;
+namespace ORB_SLAM3
 {
 PointCloudMapping::PointCloudMapping(double resolution_)
 {
-    this->resolution = resolution_;
-    voxel.setLeafSize( resolution, resolution, resolution);
-    globalMap = boost::make_shared< PointCloud >( );
+   // this->resolution = resolution_;
+   // voxel.setLeafSize( resolution, resolution, resolution);
+  //  globalMap = std::make_shared< PointCloud >( );
 
-    viewerThread = make_shared<thread>( bind(&PointCloudMapping::viewer, this ) );
+   // viewerThread = make_shared<thread>( bind(&PointCloudMapping::viewer, this ) );
 }
 
 void PointCloudMapping::shutdown()
@@ -43,18 +43,18 @@ void PointCloudMapping::shutdown()
         shutDownFlag = true;
         keyFrameUpdated.notify_one();
     }
-    viewerThread->join();
+    //viewerThread->join();
 }
 
 void PointCloudMapping::insertKeyFrame(KeyFrame* kf, cv::Mat& color, cv::Mat& depth)
 {
-    cout<<"receive a keyframe, id = "<<kf->mnId<<endl;
-    unique_lock<mutex> lck(keyframeMutex);
-    keyframes.push_back( kf );
-    colorImgs.push_back( color.clone() );
-    depthImgs.push_back( depth.clone() );
+   // cout<<"receive a keyframe, id = "<<kf->mnId<<endl;
+   // unique_lock<mutex> lck(keyframeMutex);
+   // keyframes.push_back( kf );
+   // colorImgs.push_back( color.clone() );
+   // depthImgs.push_back( depth.clone() );
 
-    keyFrameUpdated.notify_one();
+   // keyFrameUpdated.notify_one();
 }
 
 pcl::PointCloud< PointCloudMapping::PointT >::Ptr PointCloudMapping::generatePointCloud(KeyFrame* kf, cv::Mat& color, cv::Mat& depth)
@@ -81,7 +81,7 @@ pcl::PointCloud< PointCloudMapping::PointT >::Ptr PointCloudMapping::generatePoi
         }
     }
 
-    Eigen::Isometry3d T = ORB_SLAM2::Converter::toSE3Quat( kf->GetPose() );
+    Eigen::Isometry3d T = ORB_SLAM3::Converter::toSE3Quat( kf->GetPose() );
     PointCloud::Ptr cloud(new PointCloud);
     pcl::transformPointCloud( *tmp, *cloud, T.inverse().matrix());
     cloud->is_dense = false;

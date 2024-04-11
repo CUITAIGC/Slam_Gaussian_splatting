@@ -197,6 +197,8 @@ public:
     Eigen::Vector3f mNormalVectorMerge;
 
 
+    //重投影误差
+    float mReprojectionError = 0.0f;
     // Fopr inverse depth optimization
     double mInvDepth;
     double mInitU;
