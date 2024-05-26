@@ -76,7 +76,7 @@ class BackEnd(mp.Process):
         self.current_window = []
         self.initialized = not self.monocular
         self.keyframe_optimizers = None
-
+         
         # remove all gaussians
         self.gaussians.prune_points(self.gaussians.unique_kfIDs >= 0)
         # remove everything from the queues
@@ -106,6 +106,7 @@ class BackEnd(mp.Process):
                 render_pkg["opacity"],
                 render_pkg["n_touched"],
             )
+            #计算损失
             loss_init = get_loss_mapping(
                 self.config, image, depth, viewpoint, opacity, initialization=True
             )
@@ -138,7 +139,7 @@ class BackEnd(mp.Process):
         self.occ_aware_visibility[cur_frame_idx] = (n_touched > 0).long()
         Log("Initialized map")
         return render_pkg
-
+    #建图训练
     def map(self, current_window, prune=False, iters=1):
         if len(current_window) == 0:
             return
@@ -377,7 +378,9 @@ class BackEnd(mp.Process):
                 if self.single_thread:
                     time.sleep(0.01)
                     continue
+                #耗时，一直在跑
                 self.map(self.current_window)
+                #建图10次就向前端发一次跟新
                 if self.last_sent >= 10:
                     self.map(self.current_window, prune=True, iters=10)
                     self.push_to_frontend()
@@ -397,13 +400,17 @@ class BackEnd(mp.Process):
                     viewpoint = data[2]
                     depth_map = data[3]
                     Log("Resetting the system")
+                    #重置系统
                     self.reset()
-
+                    #记录视点
                     self.viewpoints[cur_frame_idx] = viewpoint
+                    #添加帧，到3d高斯
                     self.add_next_kf(
                         cur_frame_idx, viewpoint, depth_map=depth_map, init=True
                     )
+                    #初始化建图
                     self.initialize_map(cur_frame_idx, viewpoint)
+                    #丢到前端初始化
                     self.push_to_frontend("init")
 
                 elif data[0] == "keyframe":

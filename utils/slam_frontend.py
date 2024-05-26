@@ -58,6 +58,7 @@ class FrontEnd(mp.Process):
         rgb_boundary_threshold = self.config["Training"]["rgb_boundary_threshold"]
         self.kf_indices.append(cur_frame_idx)
         viewpoint = self.cameras[cur_frame_idx]
+        #将数据移动到GPU上计算
         gt_img = viewpoint.original_image.cuda()
         valid_rgb = (gt_img.sum(dim=0) > rgb_boundary_threshold)[None]
         if self.monocular:
@@ -113,16 +114,19 @@ class FrontEnd(mp.Process):
         self.iteration_count = 0
         self.occ_aware_visibility = {}
         self.current_window = []
-        # remove everything from the queues
+        # 清空队列
         while not self.backend_queue.empty():
             self.backend_queue.get()
 
-        # Initialise the frame at the ground truth pose
+        # 初始化一个位姿
         viewpoint.update_RT(viewpoint.R_gt, viewpoint.T_gt)
 
         self.kf_indices = []
+        #添加到关键帧
         depth_map = self.add_new_keyframe(cur_frame_idx, init=True)
+        #请求初始化
         self.request_init(cur_frame_idx, viewpoint, depth_map)
+        #断掉初始化
         self.reset = False
 
     def tracking(self, cur_frame_idx, viewpoint):
@@ -158,8 +162,9 @@ class FrontEnd(mp.Process):
                 "name": "exposure_b_{}".format(viewpoint.uid),
             }
         )
-
+        #训练参数
         pose_optimizer = torch.optim.Adam(opt_params)
+        #一帧渲染100次
         for tracking_itr in range(self.tracking_itr_num):
             render_pkg = render(
                 viewpoint, self.gaussians, self.pipeline_params, self.background
@@ -180,6 +185,7 @@ class FrontEnd(mp.Process):
                 converged = update_pose(viewpoint)
 
             if tracking_itr % 10 == 0:
+                #传送结果到GUI
                 self.q_main2vis.put(
                     gui_utils.GaussianPacket(
                         current_frame=viewpoint,
@@ -284,7 +290,7 @@ class FrontEnd(mp.Process):
             window.remove(removed_frame)
 
         return window, removed_frame
-
+     #发送关键帧，到后端
     def request_keyframe(self, cur_frame_idx, viewpoint, current_window, depthmap):
         msg = ["keyframe", cur_frame_idx, viewpoint, current_window, depthmap]
         self.backend_queue.put(msg)
@@ -295,10 +301,12 @@ class FrontEnd(mp.Process):
         self.backend_queue.put(msg)
 
     def request_init(self, cur_frame_idx, viewpoint, depth_map):
+        #发送帧，开始后端初始化
         msg = ["init", cur_frame_idx, viewpoint, depth_map]
         self.backend_queue.put(msg)
         self.requested_init = True
 
+    #更新位姿
     def sync_backend(self, data):
         self.gaussians = data[1]
         occ_aware_visibility = data[2]
@@ -315,6 +323,7 @@ class FrontEnd(mp.Process):
 
     def run(self):
         cur_frame_idx = 0
+        #透视投影矩阵
         projection_matrix = getProjectionMatrix2(
             znear=0.01,
             zfar=100.0,
@@ -330,6 +339,7 @@ class FrontEnd(mp.Process):
         toc = torch.cuda.Event(enable_timing=True)
 
         while True:
+            #记录是否需要暂停或者启动训练
             if self.q_vis2main.empty():
                 if self.pause:
                     continue
@@ -341,9 +351,10 @@ class FrontEnd(mp.Process):
                     continue
                 else:
                     self.backend_queue.put(["unpause"])
-
+            #是否有接受到信息，如果没有收到后端的更新信息，就回发送帧到后端训练
             if self.frontend_queue.empty():
                 tic.record()
+                #训练完成，保留结果，结束进程
                 if cur_frame_idx >= len(self.dataset):
                     if self.save_results:
                         eval_ate(
@@ -358,43 +369,47 @@ class FrontEnd(mp.Process):
                             self.gaussians, self.save_dir, "final", final=True
                         )
                     break
-
+                #正在初始化就返回
                 if self.requested_init:
                     time.sleep(0.01)
                     continue
-
+                #single_thread默认false ,如果还有没有训练完返回
                 if self.single_thread and self.requested_keyframe > 0:
                     time.sleep(0.01)
                     continue
-
+                #已经初始化了 ,如果还有没有训练完返回
                 if not self.initialized and self.requested_keyframe > 0:
                     time.sleep(0.01)
                     continue
-
+                #涵盖相机各种参数，读取一组信息
                 viewpoint = Camera.init_from_dataset(
                     self.dataset, cur_frame_idx, projection_matrix
                 )
+
+                #掩码
                 viewpoint.compute_grad_mask(self.config)
-
+                 
+                #记录视点 
                 self.cameras[cur_frame_idx] = viewpoint
-
+                #默认true 从这里开始初始化
                 if self.reset:
+                    #初始化
                     self.initialize(cur_frame_idx, viewpoint)
                     self.current_window.append(cur_frame_idx)
                     cur_frame_idx += 1
                     continue
-
+                #当前窗口大小8
                 self.initialized = self.initialized or (
                     len(self.current_window) == self.window_size
                 )
 
-                # Tracking
+                # 启动跟踪，太耗时了
                 render_pkg = self.tracking(cur_frame_idx, viewpoint)
 
                 current_window_dict = {}
                 current_window_dict[self.current_window[0]] = self.current_window[1:]
                 keyframes = [self.cameras[kf_idx] for kf_idx in self.current_window]
-
+                #传送结果到GUI，进行展示
                 self.q_main2vis.put(
                     gui_utils.GaussianPacket(
                         gaussians=clone_obj(self.gaussians),
@@ -403,7 +418,7 @@ class FrontEnd(mp.Process):
                         kf_window=current_window_dict,
                     )
                 )
-
+                #有帧正在处理，返回
                 if self.requested_keyframe > 0:
                     self.cleanup(cur_frame_idx)
                     cur_frame_idx += 1
@@ -412,6 +427,7 @@ class FrontEnd(mp.Process):
                 last_keyframe_idx = self.current_window[0]
                 check_time = (cur_frame_idx - last_keyframe_idx) >= self.kf_interval
                 curr_visibility = (render_pkg["n_touched"] > 0).long()
+                #判断是否是关键帧
                 create_kf = self.is_keyframe(
                     cur_frame_idx,
                     last_keyframe_idx,
@@ -432,25 +448,30 @@ class FrontEnd(mp.Process):
                     )
                 if self.single_thread:
                     create_kf = check_time and create_kf
+                #如果是关键帧
                 if create_kf:
+                    #滑动窗口
                     self.current_window, removed = self.add_to_window(
                         cur_frame_idx,
                         curr_visibility,
                         self.occ_aware_visibility,
                         self.current_window,
                     )
+
                     if self.monocular and not self.initialized and removed is not None:
                         self.reset = True
                         Log(
                             "Keyframes lacks sufficient overlap to initialize the map, resetting."
                         )
                         continue
+                    #添加新的关键帧
                     depth_map = self.add_new_keyframe(
                         cur_frame_idx,
                         depth=render_pkg["depth"],
                         opacity=render_pkg["opacity"],
                         init=False,
                     )
+                    #发到后端
                     self.request_keyframe(
                         cur_frame_idx, viewpoint, self.current_window, depth_map
                     )
@@ -484,6 +505,7 @@ class FrontEnd(mp.Process):
                     self.sync_backend(data)
 
                 elif data[0] == "keyframe":
+                    #更新位姿
                     self.sync_backend(data)
                     self.requested_keyframe -= 1
 

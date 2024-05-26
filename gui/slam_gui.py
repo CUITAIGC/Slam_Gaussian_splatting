@@ -73,7 +73,7 @@ class SLAM_GUI:
         self.save_path = "."
         self.save_path = pathlib.Path(self.save_path)
         self.save_path.mkdir(parents=True, exist_ok=True)
-
+        #启动线程
         threading.Thread(target=self._update_thread).start()
 
     def init_widget(self):
@@ -445,7 +445,8 @@ class SLAM_GUI:
             depth = (depth).byte().permute(1, 2, 0).contiguous().cpu().numpy()
             rgb = o3d.geometry.Image(depth)
             self.in_depth_widget.update_image(rgb)
-
+            
+        #结束信号
         if gaussian_packet.finish:
             Log("Received terminate signal", tag="GUI")
             # clean up the pipe
@@ -659,10 +660,13 @@ class SLAM_GUI:
         self.widget3d.scene.set_background([0, 0, 0, 1], self.render_img)
 
     def scene_update(self):
+        #接受结果
         self.receive_data(self.q_main2vis)
+        #刷新界面
         self.render_gui()
 
     def _update_thread(self):
+        #刷新界面
         while True:
             time.sleep(0.01)
             self.step += 1
@@ -684,6 +688,7 @@ class SLAM_GUI:
 def run(params_gui=None):
     app = o3d.visualization.gui.Application.instance
     app.initialize()
+    #初始化gui,启动gui等待结果
     win = SLAM_GUI(params_gui)
     app.run()
 

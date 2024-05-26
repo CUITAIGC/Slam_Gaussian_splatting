@@ -49,7 +49,7 @@ class SLAM:
         self.eval_rendering = self.config["Results"]["eval_rendering"]
 
         model_params.sh_degree = 3 if self.use_spherical_harmonics else 0
-
+        #创建高斯模型，设置训练参数
         self.gaussians = GaussianModel(model_params.sh_degree, config=self.config)
         self.gaussians.init_lr(6.0)
         self.dataset = load_dataset(
@@ -57,21 +57,24 @@ class SLAM:
         )
 
         self.gaussians.training_setup(opt_params)
+
         bg_color = [0, 0, 0]
         self.background = torch.tensor(bg_color, dtype=torch.float32, device="cuda")
-
+        
+        #进程交互的队列
         frontend_queue = mp.Queue()
         backend_queue = mp.Queue()
-
+        
         q_main2vis = mp.Queue() if self.use_gui else FakeQueue()
         q_vis2main = mp.Queue() if self.use_gui else FakeQueue()
 
         self.config["Results"]["save_dir"] = save_dir
         self.config["Training"]["monocular"] = self.monocular
-
+        #前端进程
         self.frontend = FrontEnd(self.config)
+        #后端进程
         self.backend = BackEnd(self.config)
-
+        
         self.frontend.dataset = self.dataset
         self.frontend.background = self.background
         self.frontend.pipeline_params = self.pipeline_params
@@ -91,7 +94,8 @@ class SLAM:
         self.backend.live_mode = self.live_mode
 
         self.backend.set_hyperparams()
-
+ 
+        #交互参数
         self.params_gui = gui_utils.ParamsGUI(
             pipe=self.pipeline_params,
             background=self.background,
@@ -102,15 +106,19 @@ class SLAM:
 
         backend_process = mp.Process(target=self.backend.run)
         if self.use_gui:
+            #延迟5秒启动gui进程
             gui_process = mp.Process(target=slam_gui.run, args=(self.params_gui,))
             gui_process.start()
             time.sleep(5)
-
+        #开始后端进程
         backend_process.start()
+        #运行前进程
         self.frontend.run()
+        #先让背景进程暂停
         backend_queue.put(["pause"])
-
+        #记录时间
         end.record()
+        #等待GPU计算结果结束才开始后面的代码
         torch.cuda.synchronize()
         # empty the frontend queue
         N_frames = len(self.frontend.cameras)
@@ -200,6 +208,7 @@ class SLAM:
 
 if __name__ == "__main__":
     # Set up command line argument parser
+    #处理参数
     parser = ArgumentParser(description="Training script parameters")
     parser.add_argument("--config", type=str)
     parser.add_argument("--eval", action="store_true")
