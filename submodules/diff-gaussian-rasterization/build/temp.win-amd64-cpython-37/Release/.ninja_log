@@ -1,6 +1,0 @@
-# ninja log v5
-7	5002	7277154978457550	D:/work_time/PyProject/gaussian-splatting/submodules/diff-gaussian-rasterization/build/temp.win-amd64-cpython-37/Release/cuda_rasterizer/forward.obj	3fee23efe5e995ec
-4	5032	7277154978786670	D:/work_time/PyProject/gaussian-splatting/submodules/diff-gaussian-rasterization/build/temp.win-amd64-cpython-37/Release/cuda_rasterizer/backward.obj	7f3faf5a19ee0223
-10	8065	7277155009080152	D:/work_time/PyProject/gaussian-splatting/submodules/diff-gaussian-rasterization/build/temp.win-amd64-cpython-37/Release/cuda_rasterizer/rasterizer_impl.obj	af8c25bcb385b9d3
-12	9882	7277155027342531	D:/work_time/PyProject/gaussian-splatting/submodules/diff-gaussian-rasterization/build/temp.win-amd64-cpython-37/Release/ext.obj	42d507e68d6817b6
-15	26947	7277155197685991	D:/work_time/PyProject/gaussian-splatting/submodules/diff-gaussian-rasterization/build/temp.win-amd64-cpython-37/Release/rasterize_points.obj	ed8dca17476932a4
