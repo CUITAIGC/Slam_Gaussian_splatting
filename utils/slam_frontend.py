@@ -381,6 +381,8 @@ class FrontEnd(mp.Process):
                 if not self.initialized and self.requested_keyframe > 0:
                     time.sleep(0.01)
                     continue
+                t = time.time()
+                print(f"start time {t}")
                 #涵盖相机各种参数，读取一组信息
                 viewpoint = Camera.init_from_dataset(
                     self.dataset, cur_frame_idx, projection_matrix
@@ -406,6 +408,8 @@ class FrontEnd(mp.Process):
                 # 启动跟踪，太耗时了
                 render_pkg = self.tracking(cur_frame_idx, viewpoint)
 
+                t2 = time.time()
+                print(f"start time {t} need (t2-t1)")
                 current_window_dict = {}
                 current_window_dict[self.current_window[0]] = self.current_window[1:]
                 keyframes = [self.cameras[kf_idx] for kf_idx in self.current_window]
@@ -427,6 +431,8 @@ class FrontEnd(mp.Process):
                 last_keyframe_idx = self.current_window[0]
                 check_time = (cur_frame_idx - last_keyframe_idx) >= self.kf_interval
                 curr_visibility = (render_pkg["n_touched"] > 0).long()
+                #curr_visibility = 0.001
+                
                 #判断是否是关键帧
                 create_kf = self.is_keyframe(
                     cur_frame_idx,
