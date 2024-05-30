@@ -7,7 +7,7 @@ import numpy as np
 import torch
 from evo.core import metrics, trajectory
 from evo.core.metrics import PoseRelation, Unit
-from evo.core.trajectory import PosePath3D, PoseTrajectory3D
+from evo.core.trajectory import PosePath3D, PoseTrajectory3D,align_trajectory
 from evo.tools import plot
 from evo.tools.plot import PlotMode
 from evo.tools.settings import SETTINGS
@@ -26,7 +26,7 @@ def evaluate_evo(poses_gt, poses_est, plot_dir, label, monocular=False):
     ## Plot
     traj_ref = PosePath3D(poses_se3=poses_gt)
     traj_est = PosePath3D(poses_se3=poses_est)
-    traj_est_aligned = trajectory.align_trajectory(
+    traj_est_aligned = align_trajectory(
         traj_est, traj_ref, correct_scale=monocular
     )
 

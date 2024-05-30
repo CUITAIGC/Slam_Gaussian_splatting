@@ -47,6 +47,7 @@ class ReplicaParser:
 
 class TUMParser:
     def __init__(self, input_folder):
+        self.max_frame_num =999999
         self.input_folder = input_folder
         self.load_poses(self.input_folder, frame_rate=32)
         self.n_img = len(self.color_paths)
@@ -82,6 +83,7 @@ class TUMParser:
 
         image_list = os.path.join(datapath, "rgb.txt")
         depth_list = os.path.join(datapath, "depth.txt")
+        
 
         image_data = self.parse_list(image_list)
         depth_data = self.parse_list(depth_list)
@@ -101,8 +103,10 @@ class TUMParser:
                 indicies += [i]
 
         self.color_paths, self.poses, self.depth_paths, self.frames = [], [], [], []
-
+         
         for ix in indicies:
+            if ix>=self.max_frame_num:
+                continue
             (i, j, k) = associations[ix]
             self.color_paths += [os.path.join(datapath, image_data[i, 1])]
             self.depth_paths += [os.path.join(datapath, depth_data[j, 1])]
@@ -197,7 +201,7 @@ class BaseDataset(torch.utils.data.Dataset):
         self.config = config
         self.device = "cuda:0"
         self.dtype = torch.float32
-        self.num_imgs = 999999
+        self.num_imgs = 9
 
     def __len__(self):
         return self.num_imgs

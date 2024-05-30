@@ -378,7 +378,7 @@ class BackEnd(mp.Process):
                 if self.single_thread:
                     time.sleep(0.01)
                     continue
-                #耗时，一直在跑
+                # 耗时，一直在跑
                 self.map(self.current_window)
                 #建图10次就向前端发一次跟新
                 if self.last_sent >= 10:
@@ -414,6 +414,8 @@ class BackEnd(mp.Process):
                     self.push_to_frontend("init")
 
                 elif data[0] == "keyframe":
+                    t_start = time.time()
+                    Log(f"后端开始处理关键帧")
                     cur_frame_idx = data[1]
                     viewpoint = data[2]
                     current_window = data[3]
@@ -426,6 +428,7 @@ class BackEnd(mp.Process):
                     opt_params = []
                     frames_to_optimize = self.config["Training"]["pose_window"]
                     iter_per_kf = self.mapping_itr_num if self.single_thread else 10
+                    
                     if not self.initialized:
                         if (
                             len(self.current_window)
@@ -438,6 +441,7 @@ class BackEnd(mp.Process):
                             Log("Performing initial BA for initialization")
                         else:
                             iter_per_kf = self.mapping_itr_num
+                    Log(f"iter {iter_per_kf} {len(self.current_window)}")
                     for cam_idx in range(len(self.current_window)):
                         if self.current_window[cam_idx] == 0:
                             continue
@@ -478,7 +482,9 @@ class BackEnd(mp.Process):
                     self.keyframe_optimizers = torch.optim.Adam(opt_params)
 
                     self.map(self.current_window, iters=iter_per_kf)
-                    self.map(self.current_window, prune=True)
+                    self.map(self.current_window, prune=True) 
+                    t_end = time.time()
+                    Log(f"关键帧处理结束 ， 用时 {t_end-t_start}")
                     self.push_to_frontend("keyframe")
                 else:
                     raise Exception("Unprocessed data", data)

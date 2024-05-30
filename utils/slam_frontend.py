@@ -381,8 +381,7 @@ class FrontEnd(mp.Process):
                 if not self.initialized and self.requested_keyframe > 0:
                     time.sleep(0.01)
                     continue
-                t = time.time()
-                print(f"start time {t}")
+                t_start = time.time()
                 #涵盖相机各种参数，读取一组信息
                 viewpoint = Camera.init_from_dataset(
                     self.dataset, cur_frame_idx, projection_matrix
@@ -408,8 +407,6 @@ class FrontEnd(mp.Process):
                 # 启动跟踪，太耗时了
                 render_pkg = self.tracking(cur_frame_idx, viewpoint)
 
-                t2 = time.time()
-                print(f"start time {t} need (t2-t1)")
                 current_window_dict = {}
                 current_window_dict[self.current_window[0]] = self.current_window[1:]
                 keyframes = [self.cameras[kf_idx] for kf_idx in self.current_window]
@@ -424,6 +421,7 @@ class FrontEnd(mp.Process):
                 )
                 #有帧正在处理，返回
                 if self.requested_keyframe > 0:
+                    Log(f"处理关键帧中，返回")
                     self.cleanup(cur_frame_idx)
                     cur_frame_idx += 1
                     continue
@@ -456,6 +454,7 @@ class FrontEnd(mp.Process):
                     create_kf = check_time and create_kf
                 #如果是关键帧
                 if create_kf:
+                    Log(f"第{cur_frame_idx}帧，被选为关键帧")
                     #滑动窗口
                     self.current_window, removed = self.add_to_window(
                         cur_frame_idx,
@@ -501,6 +500,9 @@ class FrontEnd(mp.Process):
                     )
                 toc.record()
                 torch.cuda.synchronize()
+
+                t_end = time.time()
+                Log(f"第{cur_frame_idx-1}帧，训练时间{t_end-t_start}")
                 if create_kf:
                     # throttle at 3fps when keyframe is added
                     duration = tic.elapsed_time(toc)
